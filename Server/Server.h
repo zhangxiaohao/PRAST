@@ -6,10 +6,13 @@
 #define AST_SERVER_H
 
 #include "../Tool.h"
+#include "../TransferQueue/TransferQueue.h"
 //临时队列
 class OperationQueue {
 public:
     OperationQueue();
+private:
+    queue<Operation> operationQueue;
 };
 
 //服务器的文本结构
@@ -22,7 +25,18 @@ public:
     bool AddTag(Id pos);
     //删除失败则代表不存在
     bool DeleteTag(Id pos);
+
+    ///在文档上执行一个操作
+    ///返回操作执行是否成功
+    bool Execute(shared_ptr<Operation> op);
+
 private:
+
+    ///AST基本函数
+    void AddDeleteOperation(shared_ptr<Operation> op);
+    void InsertNode(shared_ptr<Operation> op);
+    void rangescan(list<Node>::iterator node, shared_ptr<Operation> op);
+
     //AST基础结构
     map<Id, list<Node>::iterator> HT;
     list<Node> nodeList;

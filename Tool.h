@@ -12,8 +12,10 @@
 #include <list>
 #include <map>
 #include <set>
+#include <queue>
 //cpp 11 lib
 #include <thread>
+#include <mutex>
 //c lib
 #include <algorithm>
 #include <cstdio>
@@ -36,6 +38,11 @@ struct Node {
     string str;	//当前节点包含的字符串
     Id nodeId;	//当前节点的唯一标识符
     vector<Operation> opList;  //当前节点包含的操作列表
+};
+
+//一次操作同步的传输单元
+struct TransferObj {
+
 };
 
 //id相关成员函数
