@@ -27,8 +27,9 @@ typedef pair<int, int> Id;
 
 struct Operation {
     int type; //0 插入 1 删除
-    string data;	//操作附加数据
     Id targetNode;	//操作目标节点
+    string data;	//操作附加数据
+    Id insertNode;  //插入节点
 };
 
 struct Node {
