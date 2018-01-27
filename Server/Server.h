@@ -7,13 +7,6 @@
 
 #include "../Tool.h"
 #include "../TransferQueue/TransferQueue.h"
-//临时队列
-class OperationQueue {
-public:
-    OperationQueue();
-private:
-    queue<Operation> operationQueue;
-};
 
 //服务器的文本结构
 class ServerDocument {
@@ -45,19 +38,33 @@ private:
     map<int, pair<int, int>> ART;
     //记录tag
     set<Id> tagList;
-    int clientNumber;
+
 };
 
 
 //负责服务器的逻辑控制
 class ServerControl {
 private:
-    static ServerControl Instance;
+    shared_ptr<ServerDocument> Doc;
+    static ServerControl* instance;
+    //临时队列
+    vector<pair<shared_ptr<Operation>, int>> operationQueue;
+
     ServerControl();
+
+    //处理一次操作同步请求
+    void SyncWithClient(shared_ptr<TransferObj> objPtr);
+
 public:
-    static ServerControl GetInstance() {
-        return Instance;
+    static ServerControl* GetInstance() {
+        if(instance == nullptr) {
+            instance = new ServerControl();
+        }
+        return instance;
     }
+
+    //服务器工作函数
+    void Work(int &done);
 
 };
 

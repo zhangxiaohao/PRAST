@@ -21,6 +21,8 @@ public:
     int GetDocumentLength();
     //获取pos位置的Id
     Id GetIdByPos(int pos);
+    //获取当前本地操作数
+    int GetOperationCount();
 
 private:
 
@@ -32,6 +34,8 @@ private:
     map<Id, list<Node>::iterator> HT;
     list<Node> nodeList;
     int documentLength;
+    //操作计数器 用来生成id
+    int operationCount;
 };
 
 //负责客户端的流程控制
@@ -46,14 +50,14 @@ private:
     shared_ptr<Document> Doc;
     //临时存储本地还没和服务器同步的操作
     queue<shared_ptr<Operation>> operationQueue;
-    ClientControl(int clientId);
-    ClientControl(const ClientControl &ins);
 
 public:
     //服务器交互函数 线程1
     int OperationSync();
     int ReplicaSync();
 
+    ClientControl(int clientId);
+    ClientControl(const ClientControl &ins);
     //执行一个随机本地操作 线程2
     bool ExecuteAnOpertation();
 };

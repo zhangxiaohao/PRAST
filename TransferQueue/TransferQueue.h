@@ -22,7 +22,7 @@ public:
     shared_ptr<TransferObj> GetOperationSyncWithClientId(int clientId);
 
     //获取单例句柄
-    static shared_ptr<TransferQueue> GetInstance() {
+    static TransferQueue* GetInstance() {
         if(instance == nullptr) {
             instance = new TransferQueue();
         }
@@ -37,7 +37,7 @@ private:
     std::mutex responseMtx;
 
     //单例句柄
-    static shared_ptr<TransferQueue> instance;
+    static TransferQueue *instance;
     //clientId, request
     map<int, shared_ptr<TransferObj>> requestQueue;
     //clientId, response

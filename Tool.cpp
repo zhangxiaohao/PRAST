@@ -3,18 +3,13 @@
 //
 #include "Tool.h"
 
-//id 相关成员函数
-Id GetId(int _s, int _ucn) {
-    Id ret = make_pair(_s, _ucn);
-    return ret;
-}
-
 //Operation相关成员函数
-Operation GetOperation(int _type, string _data, Id _targetNode) {
+Operation GetOperation(int _type, string _data, Id _targetNode, Id _insertNode) {
     Operation ret;
     ret.type = _type;
     ret.data = _data;
     ret.targetNode = _targetNode;
+    ret.insertNode = _insertNode;
     return ret;
 }
 

@@ -16,6 +16,7 @@
 //cpp 11 lib
 #include <thread>
 #include <mutex>
+#include <memory>
 //c lib
 #include <algorithm>
 #include <cstdio>
@@ -27,29 +28,37 @@ using namespace std;
 typedef pair<int, int> Id;
 //Id.first (s)本地分配计数器 | Id.second (ucn)全局唯一站点标识符
 
-struct Operation {
+//const value
+const int CLIENTNUM = 2;
+const int INSERTNUM = 7;
+
+class Operation {
+public:
     int type; //0 插入 1 删除
     Id targetNode;	//操作目标节点
     string data;	//操作附加数据
     Id insertNode;  //插入节点
 };
 
-struct Node {
+class Node {
+public:
     string str;	//当前节点包含的字符串
     Id nodeId;	//当前节点的唯一标识符
-    vector<Operation> opList;  //当前节点包含的操作列表
+    vector<shared_ptr<Operation>> opList;  //当前节点包含的操作列表
 };
 
 //一次操作同步的传输单元
-struct TransferObj {
-
+class TransferObj {
+public:
+    int clientId;   //发起操作同步的客户端id
+    vector<shared_ptr<Operation>> opList;   //操作列表
 };
 
 //id相关成员函数
 Id GetId(int _s, int _ucn);
 
 //Operation相关成员函数
-Operation GetOperation(int _type, string _data, Id _targetNode);
+Operation GetOperation(int _type, string _data, Id _targetNode, Id _insertNode);
 
 //Node相关成员函数
 Node GetNode(string _str, Id _nodeId);

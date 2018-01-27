@@ -8,7 +8,6 @@
 
 //构造函数
 ServerDocument::ServerDocument() {
-    this->clientNumber = 0;
     this->HT.clear();
     this->nodeList.clear();
     Node mock = GetNode("", make_pair(-1, -1));
@@ -42,22 +41,56 @@ bool ServerDocument::Execute(shared_ptr<Operation> op) {
 
 void ServerDocument::rangescan(list<Node>::iterator node, shared_ptr<Operation> op) {
     for( ; node != this->nodeList.end(); node ++) {
-        if(node -> nodeId > op -> insertNode) {
-            nodeList.insert(node, GetNode(op -> data, op -> insertNode));
+        if(node->nodeId > op->insertNode) {
+            nodeList.insert(node, GetNode(op->data, op->insertNode));
         }
     }
 }
 
 //执行一个删除操作
 void ServerDocument::AddDeleteOperation(shared_ptr<Operation> op) {
-    list<Node>::iterator node = this -> HT[op -> targetNode];
-    (node -> opList).push_back(*op);
+    list<Node>::iterator node = this->HT[op->targetNode];
+    (node->opList).push_back(op);
 }
 
 //执行一个插入操作
 void ServerDocument::InsertNode(shared_ptr<Operation> op) {
-    list<Node>::iterator node = this -> HT[op -> targetNode];
+    list<Node>::iterator node = this->HT[op->targetNode];
     rangescan(node, op);
 }
 
 ///////////ServerControl////////////////
+
+//构造函数
+ServerControl::ServerControl() : Doc(new ServerDocument()){
+}
+
+//和客户端进行一次操作同步 objPtr也是返回值
+void ServerControl::SyncWithClient(shared_ptr<TransferObj> objPtr) {
+    //找到需要返回的操作
+    vector<shared_ptr<Operation>> rtnList;
+    for(int i=(int)this->operationQueue.size() - 1; i > 0; i--) {
+        if(this->operationQueue[i].second == objPtr->clientId) break;
+        rtnList.push_back(this->operationQueue[i].first);
+    }
+    for(int i=0; i<objPtr->opList.size(); i++) {
+        //服务器上执行操作
+        this->Doc->Execute(objPtr->opList[i]);
+        //push到本地临时队列
+        (this->operationQueue).push_back(make_pair(objPtr->opList[i], objPtr->clientId));
+    }
+    objPtr->opList = rtnList;
+    TransferQueue::GetInstance()->SetOperationSyncWithClientIdRtn(objPtr->clientId, objPtr);
+}
+
+//服务器主函数
+void ServerControl::Work(int &done) {
+    shared_ptr<TransferObj> objPtr;
+    while(!done) {
+        for(int i=0; i<CLIENTNUM; i++) {
+            objPtr = TransferQueue::GetInstance()->GetOperationSyncWithClientId(i);
+            SyncWithClient(objPtr);
+            TransferQueue::GetInstance()->SetOperationSyncWithClientIdRtn(i, objPtr);
+        }
+    }
+}

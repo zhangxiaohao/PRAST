@@ -6,6 +6,11 @@
 
 Document::Document() {
     this->Init();
+    this->operationCount = 0;
+    Node mock = GetNode("", make_pair(-1, -1));
+    //创建头尾节点
+    nodeList.push_back(mock);
+    nodeList.push_back(mock);
 }
 
 //在文档结构上执行一个操作
@@ -14,7 +19,8 @@ bool Document::Execute(shared_ptr<Operation> op) {
         this->InsertNode(op);
     } else if(op->type == 1) { //删除操作
         this->AddDeleteOperation(op);
-    }
+    } else return false;
+    return true;
 }
 
 //清空所有数据结构为部分副本同步做准备
@@ -22,10 +28,6 @@ void Document::Init() {
     this->HT.clear();
     this->nodeList.clear();
     this->documentLength = 0;
-    Node mock = GetNode("", make_pair(-1, -1));
-    //创建头尾节点
-    nodeList.push_back(mock);
-    nodeList.push_back(mock);
 }
 
 void Document::rangescan(list<Node>::iterator node, shared_ptr<Operation> op) {
@@ -39,7 +41,7 @@ void Document::rangescan(list<Node>::iterator node, shared_ptr<Operation> op) {
 //执行一个删除操作
 void Document::AddDeleteOperation(shared_ptr<Operation> op) {
     list<Node>::iterator node = this -> HT[op -> targetNode];
-    (node -> opList).push_back(*op);
+    (node -> opList).push_back(op);
     if(node->opList.size() == 2) {
         this->documentLength --;
     }
@@ -64,11 +66,15 @@ Id Document::GetIdByPos(int pos) {
     return it->nodeId;
 }
 
+//获取本地操作数，每次递增
+int Document::GetOperationCount() {
+    return this->operationCount ++;
+}
+
 ////////////////////////客户端控制类////////////////////////////
 //构造函数
-ClientControl::ClientControl(int clientId) {
+ClientControl::ClientControl(int clientId) : Doc(new Document()){
     this->clientId = clientId;
-    this->Doc = make_shared(new Document());
     while(!this->operationQueue.empty()) {
         operationQueue.pop();
     }
@@ -77,15 +83,21 @@ ClientControl::ClientControl(int clientId) {
 //操作同步
 int ClientControl::OperationSync() {
     std::lock_guard<std::mutex> lck(this->DocMtx);
-
+    shared_ptr<TransferObj> objPtr(new TransferObj());
+    objPtr->clientId = this->clientId;
+    while(!this->operationQueue.empty()) {
+        objPtr->opList.push_back(this->operationQueue.front());
+        this->operationQueue.pop();
+    }
+    return TransferQueue::GetInstance()->SetOperationSyncWithClientId(this->clientId, objPtr);
 }
 
 //副本同步
 int ClientControl::ReplicaSync() {
     std::lock_guard<std::mutex> lck(this->DocMtx);
-
     //清空所有结构
     this->Doc->Init();
+    return 0;
 }
 
 //执行一个本地随机操作
@@ -93,12 +105,14 @@ bool ClientControl::ExecuteAnOpertation() {
     std::lock_guard<std::mutex> lck(this->DocMtx);
     shared_ptr<Operation> operationPtr;
     int pos;
-    if(rand()%10 > 7 || this->Doc->GetDocumentLength() == 0) { //插入操作的比例 或者文档中没有可以删除的节点 产生插入操作
+    if(rand()%10 > INSERTNUM || this->Doc->GetDocumentLength() == 0) { //插入操作的比例 或者文档中没有可以删除的节点 产生插入操作
         pos = rand() % (this->Doc->GetDocumentLength() + 1);
-        operationPtr = make_shared(GetOperation(0, "" + ('a'+rand()%26), this->Doc->GetIdByPos(pos)));
+        string c = "a";
+        c[0] += rand()%26;
+        operationPtr = make_shared<Operation>(GetOperation(0, c, this->Doc->GetIdByPos(pos), make_pair(this->Doc->GetOperationCount(), clientId)));
     } else {
         pos = rand() % this->Doc->GetDocumentLength();
-        operationPtr = make_shared(GetOperation(1, "", this->Doc->GetIdByPos(pos)));
+        operationPtr = std::make_shared<Operation>(GetOperation(1, "", this->Doc->GetIdByPos(pos), make_pair(-1, -1)));
     }
     (this->operationQueue).push(operationPtr);
     return this->Doc->Execute(operationPtr);
