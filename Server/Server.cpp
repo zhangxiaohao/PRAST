@@ -4,15 +4,23 @@
 
 #include "Server.h"
 
+extern ServerControl* ServerControl::instance;
+
 ///////////ServerDocument////////////////
 
 //构造函数
 ServerDocument::ServerDocument() {
     this->HT.clear();
     this->nodeList.clear();
-    Node mock = GetNode("", make_pair(-1, -1));
-    this->nodeList.push_back(mock);
-    this->nodeList.push_back(mock);
+    Node head = GetNode("", make_pair(INT_MIN, INT_MIN));
+    Node tail = GetNode("", make_pair(INT_MAX, INT_MAX));
+    //创建头尾节点
+    nodeList.push_back(head);
+    list<Node>::iterator it = nodeList.end(); --it;
+    HT[make_pair(INT_MIN, INT_MIN)] = it;
+    nodeList.push_back(tail);
+    it = nodeList.end(); --it;
+    HT[make_pair(INT_MAX, INT_MAX)] = it;
 }
 
 //插入一个标记
@@ -43,6 +51,9 @@ void ServerDocument::rangescan(list<Node>::iterator node, shared_ptr<Operation> 
     for( ; node != this->nodeList.end(); node ++) {
         if(node->nodeId > op->insertNode) {
             nodeList.insert(node, GetNode(op->data, op->insertNode));
+            node --;
+            HT[op->insertNode] = node;
+            break;
         }
     }
 }
@@ -63,6 +74,14 @@ void ServerDocument::InsertNode(shared_ptr<Operation> op) {
 
 //构造函数
 ServerControl::ServerControl() : Doc(new ServerDocument()){
+}
+
+//get Instance
+ServerControl* ServerControl::GetInstance() {
+    if(instance == NULL) {
+        instance = new ServerControl();
+    }
+    return instance;
 }
 
 //和客户端进行一次操作同步 objPtr也是返回值

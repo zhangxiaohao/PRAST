@@ -46,7 +46,6 @@ private:
 class ServerControl {
 private:
     shared_ptr<ServerDocument> Doc;
-    static ServerControl* instance;
     //临时队列
     vector<pair<shared_ptr<Operation>, int>> operationQueue;
 
@@ -56,12 +55,8 @@ private:
     void SyncWithClient(shared_ptr<TransferObj> objPtr);
 
 public:
-    static ServerControl* GetInstance() {
-        if(instance == nullptr) {
-            instance = new ServerControl();
-        }
-        return instance;
-    }
+    static ServerControl* instance;
+    static ServerControl* GetInstance();
 
     //服务器工作函数
     void Work(int &done);

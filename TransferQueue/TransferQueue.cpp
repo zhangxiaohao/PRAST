@@ -4,10 +4,20 @@
 
 #include "TransferQueue.h"
 
+extern TransferQueue* TransferQueue::instance;
+
 //构造函数
 TransferQueue::TransferQueue() {
     this->requestQueue.clear();
     this->responseQueue.clear();
+}
+
+//获取单例句柄
+TransferQueue* TransferQueue::GetInstance() {
+    if(instance == nullptr) {
+        instance = new TransferQueue();
+    }
+    return instance;
 }
 
 //客户端发起操作同步

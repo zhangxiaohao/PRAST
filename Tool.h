@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <queue>
+#include <climits>
 //cpp 11 lib
 #include <thread>
 #include <mutex>
@@ -38,6 +39,8 @@ public:
     Id targetNode;	//操作目标节点
     string data;	//操作附加数据
     Id insertNode;  //插入节点
+
+    void Output();
 };
 
 class Node {
@@ -62,5 +65,6 @@ Operation GetOperation(int _type, string _data, Id _targetNode, Id _insertNode);
 
 //Node相关成员函数
 Node GetNode(string _str, Id _nodeId);
+Node GetNode(string _str, Id _nodeId, shared_ptr<Operation> op);
 
 #endif //AST_TOOL_H

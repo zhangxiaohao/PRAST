@@ -23,6 +23,8 @@ public:
     Id GetIdByPos(int pos);
     //获取当前本地操作数
     int GetOperationCount();
+    //output
+    void Output();
 
 private:
 
