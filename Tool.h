@@ -24,14 +24,15 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <sys/time.h>
 
 using namespace std;
 typedef pair<int, int> Id;
 //Id.first (s)本地分配计数器 | Id.second (ucn)全局唯一站点标识符
 
 //const value
-const int CLIENTNUM = 2;
-const int INSERTNUM = 7;
+const int CLIENTNUM = 1;
+const int INSERTNUM = 0;
 
 class Operation {
 public:

@@ -61,7 +61,7 @@ public:
     ClientControl(int clientId);
     ClientControl(const ClientControl &ins);
     //执行一个随机本地操作 线程2
-    bool ExecuteAnOpertation();
+    int ExecuteAnOpertation();
 };
 
 #endif //AST_CLIENT_H

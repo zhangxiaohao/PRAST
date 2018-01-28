@@ -33,7 +33,7 @@ bool TransferQueue::SetOperationSyncWithClientId(int clientId, shared_ptr<Transf
 bool TransferQueue::SetOperationSyncWithClientIdRtn(int clientId, shared_ptr<TransferObj> transferObj) {
     std::lock_guard<std::mutex> lck(this->responseMtx);
     //客户端还没有取走上一次的结果
-    if(this -> responseQueue.count(clientId)) return false;
+    if(this->responseQueue.count(clientId)) return false;
     this->responseQueue[clientId] = transferObj;
     return true;
 }
@@ -41,11 +41,17 @@ bool TransferQueue::SetOperationSyncWithClientIdRtn(int clientId, shared_ptr<Tra
 //客户端取走服务器返回值
 shared_ptr<TransferObj> TransferQueue::GetOperationSyncWithClientIdRtn(int clientId) {
     std::lock_guard<std::mutex> lck(this->responseMtx);
-    return this->responseQueue[clientId];
+    if(!this->responseQueue.count(clientId)) return nullptr;
+    shared_ptr<TransferObj> ret = this->responseQueue[clientId];
+    this->responseQueue.erase(clientId);
+    return ret;
 }
 
 //服务器取走客户端请求
 shared_ptr<TransferObj> TransferQueue::GetOperationSyncWithClientId(int clientId) {
     std::lock_guard<std::mutex> lck(this->requestMtx);
-    return this->requestQueue[clientId];
+    if(!this->requestQueue.count(clientId)) return nullptr;
+    shared_ptr<TransferObj> ret = this->requestQueue[clientId];
+    this->requestQueue.erase(clientId);
+    return ret;
 }

@@ -2,20 +2,12 @@
 // Created by 张小豪 on 2018/1/14.
 //
 
+#include <unistd.h>
 #include "Client.h"
 
 Document::Document() {
     this->Init();
     this->operationCount = 0;
-    Node head = GetNode("", make_pair(INT_MIN, INT_MIN));
-    Node tail = GetNode("", make_pair(INT_MAX, INT_MAX));
-    //创建头尾节点
-    nodeList.push_back(head);
-    list<Node>::iterator it = nodeList.end(); --it;
-    HT[make_pair(INT_MIN, INT_MIN)] = it;
-    nodeList.push_back(tail);
-    it = nodeList.end(); --it;
-    HT[make_pair(INT_MAX, INT_MAX)] = it;
 }
 
 //在文档结构上执行一个操作
@@ -33,6 +25,16 @@ void Document::Init() {
     this->HT.clear();
     this->nodeList.clear();
     this->documentLength = 0;
+    ///////////////////////
+    Node head = GetNode("", make_pair(INT_MIN, INT_MIN));
+    Node tail = GetNode("", make_pair(INT_MAX, INT_MAX));
+    //创建头尾节点
+    nodeList.push_back(head);
+    list<Node>::iterator it = nodeList.end(); --it;
+    HT[make_pair(INT_MIN, INT_MIN)] = it;
+    nodeList.push_back(tail);
+    it = nodeList.end(); --it;
+    HT[make_pair(INT_MAX, INT_MAX)] = it;
 }
 
 void Document::rangescan(list<Node>::iterator node, shared_ptr<Operation> op) {
@@ -41,7 +43,6 @@ void Document::rangescan(list<Node>::iterator node, shared_ptr<Operation> op) {
             nodeList.insert(node, GetNode(op->data, op->insertNode, op));
             node --;
             if(node->nodeId != op->insertNode) cout << "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1" << endl;
-            cout << "size: " << node->opList.size() << endl;
             HT[op->insertNode] = node;
             break;
         }
@@ -50,6 +51,7 @@ void Document::rangescan(list<Node>::iterator node, shared_ptr<Operation> op) {
 
 //执行一个删除操作
 void Document::AddDeleteOperation(shared_ptr<Operation> op) {
+    if(!this->HT.count(op->targetNode)) return ;
     list<Node>::iterator node = this -> HT[op -> targetNode];
     (node -> opList).push_back(op);
     if(node->opList.size() == 2) {
@@ -59,6 +61,7 @@ void Document::AddDeleteOperation(shared_ptr<Operation> op) {
 
 //执行一个插入操作
 void Document::InsertNode(shared_ptr<Operation> op) {
+    if(!this->HT.count(op->targetNode)) return ;
     list<Node>::iterator node = this -> HT[op -> targetNode];
     rangescan(node, op);
     this->documentLength ++;
@@ -105,14 +108,29 @@ ClientControl::ClientControl(int clientId) : Doc(new Document()){
 
 //操作同步
 int ClientControl::OperationSync() {
-    std::lock_guard<std::mutex> lck(this->DocMtx);
-    shared_ptr<TransferObj> objPtr(new TransferObj());
-    objPtr->clientId = this->clientId;
-    while(!this->operationQueue.empty()) {
-        objPtr->opList.push_back(this->operationQueue.front());
-        this->operationQueue.pop();
+    {
+        std::lock_guard<std::mutex> lck(this->DocMtx);
+        shared_ptr<TransferObj> objPtr(new TransferObj());
+        objPtr->clientId = this->clientId;
+        while (!this->operationQueue.empty()) {
+            objPtr->opList.push_back(this->operationQueue.front());
+            this->operationQueue.pop();
+        }
+        TransferQueue::GetInstance()->SetOperationSyncWithClientId(this->clientId, objPtr);
     }
-    return TransferQueue::GetInstance()->SetOperationSyncWithClientId(this->clientId, objPtr);
+    shared_ptr<TransferObj> obj = nullptr;
+    do{
+        //sleep and get answer
+        usleep(500);
+        obj = TransferQueue::GetInstance()->GetOperationSyncWithClientIdRtn(this->clientId);
+    }while(obj == nullptr);
+
+    {
+        std::lock_guard<std::mutex> lck(this->DocMtx);
+        for(int i=int(obj->opList.size())-1; i>=0; i--) {
+            this->Doc->Execute(obj->opList[i]);
+        }
+    }
 }
 
 //副本同步
@@ -124,11 +142,11 @@ int ClientControl::ReplicaSync() {
 }
 
 //执行一个本地随机操作
-bool ClientControl::ExecuteAnOpertation() {
+int ClientControl::ExecuteAnOpertation() {
     std::lock_guard<std::mutex> lck(this->DocMtx);
     shared_ptr<Operation> operationPtr;
     int pos;
-    if(rand()%10 > INSERTNUM || this->Doc->GetDocumentLength() == 0) { //插入操作的比例 或者文档中没有可以删除的节点 产生插入操作
+    if(rand()%10 >= INSERTNUM || this->Doc->GetDocumentLength() == 0) { //插入操作的比例 或者文档中没有可以删除的节点 产生插入操作
         pos = rand() % (this->Doc->GetDocumentLength() + 1);
         string c = "a";
         c[0] += rand()%26;
@@ -137,10 +155,15 @@ bool ClientControl::ExecuteAnOpertation() {
         pos = (rand() % this->Doc->GetDocumentLength()) + 2;
         operationPtr = std::make_shared<Operation>(GetOperation(1, "", this->Doc->GetIdByPos(pos), make_pair(-1, -1)));
     }
-    this->Doc->Output();
-    cout << "Doc len: " << this->Doc->GetDocumentLength() << " | pos: " << pos << endl;
-    operationPtr->Output();
+ //   this->Doc->Output();
+ //   cout << "Doc len: " << this->Doc->GetDocumentLength() << " | pos: " << pos << endl;
+ //   operationPtr->Output();
     (this->operationQueue).push(operationPtr);
-    return this->Doc->Execute(operationPtr);
+    timeval start, end;
+    gettimeofday(&start, NULL);
+    this->Doc->Execute(operationPtr);
+    gettimeofday(&end, NULL);
+    int use_time = 1000*(end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)/1000;
+    return use_time;
 }
 

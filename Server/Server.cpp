@@ -88,7 +88,7 @@ ServerControl* ServerControl::GetInstance() {
 void ServerControl::SyncWithClient(shared_ptr<TransferObj> objPtr) {
     //找到需要返回的操作
     vector<shared_ptr<Operation>> rtnList;
-    for(int i=(int)this->operationQueue.size() - 1; i > 0; i--) {
+    for(int i=(int)this->operationQueue.size() - 1; i >= 0; i--) {
         if(this->operationQueue[i].second == objPtr->clientId) break;
         rtnList.push_back(this->operationQueue[i].first);
     }
@@ -103,13 +103,12 @@ void ServerControl::SyncWithClient(shared_ptr<TransferObj> objPtr) {
 }
 
 //服务器主函数
-void ServerControl::Work(int &done) {
+void ServerControl::Work() {
     shared_ptr<TransferObj> objPtr;
-    while(!done) {
-        for(int i=0; i<CLIENTNUM; i++) {
-            objPtr = TransferQueue::GetInstance()->GetOperationSyncWithClientId(i);
-            SyncWithClient(objPtr);
-            TransferQueue::GetInstance()->SetOperationSyncWithClientIdRtn(i, objPtr);
-        }
+    for(int i=0; i<CLIENTNUM; i++) {
+        objPtr = TransferQueue::GetInstance()->GetOperationSyncWithClientId(i);
+        if(objPtr == nullptr) continue;
+        SyncWithClient(objPtr);
+        TransferQueue::GetInstance()->SetOperationSyncWithClientIdRtn(i, objPtr);
     }
 }

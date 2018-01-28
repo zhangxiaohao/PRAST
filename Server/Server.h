@@ -5,6 +5,7 @@
 #ifndef AST_SERVER_H
 #define AST_SERVER_H
 
+#include <atomic>
 #include "../Tool.h"
 #include "../TransferQueue/TransferQueue.h"
 
@@ -59,7 +60,7 @@ public:
     static ServerControl* GetInstance();
 
     //服务器工作函数
-    void Work(int &done);
+    void Work();
 
 };
 
